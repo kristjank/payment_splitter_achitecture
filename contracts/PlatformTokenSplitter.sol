@@ -6,8 +6,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
- * @title Token Payment Splitter
- * @notice It splits Treasury token to Owner EOA/VCs/Stakers treasury contracts based on shares.
+ * @title PlatformToken Payment Splitter
+ * @notice It splits Treasury token to Owner EOA/VCs contract based on shares.
  */
 
 contract TokenPaymentSplitter is Ownable, ReentrancyGuard {
@@ -16,23 +16,24 @@ contract TokenPaymentSplitter is Ownable, ReentrancyGuard {
   event PayeeAdded(address account, uint256 shares);
   event PaymentReleased(address to, uint256 amount);
 
-  address internal paymentToken; //address of erc20 token
+  address internal PlatformToken; //address of erc20 token
   uint256 internal _totalShares; //total shares from all payees
   uint256 internal _totalTokenReleased; //total amount released to all payees
   address[] internal _payees; //address of payees
   mapping(address => uint256) internal _shares; //shares per address payee
   mapping(address => uint256) internal _tokenReleased; //amount of token per payee's address
-
+  
   /**
     * @notice Constructor
     * @param _payees array of payee's address
     * @param _shares array of amount per payee's address
-    * @param _paymentToken usdt token address  
+    * @param _platformToken Platform token address  
   */
+
   constructor(
     address[] memory payees,
     uint256[] memory shares,
-    address _paymentToken
+    address _platformToken
   ) {
     require(
         payees.length == shares.length,
@@ -42,7 +43,7 @@ contract TokenPaymentSplitter is Ownable, ReentrancyGuard {
     for (uint256 i = 0; i < payees.length; i++) {
         _addPayee(payees[i], shares[i]);
     }
-    paymentToken = IERC20(_paymentToken);
+    PlatformToken = IERC20(_platformToken);
   }
 
   function totalShares() public view returns (uint256) {
@@ -63,7 +64,7 @@ contract TokenPaymentSplitter is Ownable, ReentrancyGuard {
         "account has no shares"
     );
 
-    uint256 tokenTotalReceived = IERC20(paymentToken).balanceOf(
+    uint256 tokenTotalReceived = IERC20(PlatformToken).balanceOf(
         address(this)
     ) + _totalTokenReleased;
     uint256 payment = (tokenTotalReceived * _shares[account]) /
@@ -78,7 +79,7 @@ contract TokenPaymentSplitter is Ownable, ReentrancyGuard {
     _tokenReleased[account] = _tokenReleased[account] + payment;
     _totalTokenReleased = _totalTokenReleased + payment;
 
-    IERC20(paymentToken).safeTransfer(account, payment);
+    IERC20(PlatformToken).safeTransfer(account, payment);
     emit PaymentReleased(account, payment);
   }
 
@@ -87,7 +88,7 @@ contract TokenPaymentSplitter is Ownable, ReentrancyGuard {
         return 0;
     }
 
-    uint256 tokenTotalReceived = IERC20(paymentToken).balanceOf(address(this)) + _totalTokenReleased;
+    uint256 tokenTotalReceived = IERC20(PlatformToken).balanceOf(address(this)) + _totalTokenReleased;
     uint256 payment = ((tokenTotalReceived * _shares[account]) / _totalShares) -
         _tokenReleased[account];
 
